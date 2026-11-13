@@ -79,3 +79,24 @@ void sendReading() {
   http.end();
   updateFan();
 }
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
+  dht.begin();
+  connectWifi();
+  Serial.println("MAC: " + WiFi.macAddress());
+  mqtt.setServer(MQTT_HOST, MQTT_PORT);
+  mqtt.setCallback(onMessage);
+  connectMqtt();
+}
+
+void loop() {
+  if (!mqtt.connected()) connectMqtt();
+  mqtt.loop();
+  if (millis() - lastReading >= 10000 || lastReading == 0) {
+    lastReading = millis();
+    sendReading();
+  }
+}
