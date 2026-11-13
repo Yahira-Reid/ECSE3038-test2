@@ -64,3 +64,18 @@ void onMessage(char* topic, byte* payload, unsigned int length) {
   maxHumidity = doc["max_humidity"].as<float>();
   updateFan();
 }
+
+void sendReading() {
+  float h = dht.readHumidity();
+  if (isnan(h)) return;
+  humidity = h;
+  HTTPClient http;
+  http.begin(API_URL);
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("X-API-Key", DEVICE_KEY);
+  String body = "{\"mac\":\"" + WiFi.macAddress() + "\",\"humidity\":" + String(humidity) + "}";
+  int code = http.POST(body);
+  Serial.println("POST /readings -> " + String(code));
+  http.end();
+  updateFan();
+}
