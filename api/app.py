@@ -52,3 +52,9 @@ def create_reading(reading: ReadingIn, x_api_key: str = Header(default=None)):
     now = datetime.now(timezone.utc)
     readings.insert_one({"mac": reading.mac, "humidity": reading.humidity, "time": now})
     return {"mac": reading.mac, "humidity": reading.humidity, "time": now.isoformat()}
+
+@app.get("/readings")
+def list_readings(mac: str = None, limit: int = Query(default=10, ge=1, le=100)):
+    query = {"mac": mac} if mac else {}
+    docs = readings.find(query, {"_id": 0}).sort("time", -1).limit(limit)
+    return [{**d, "time": d["time"].isoformat()} for d in docs]
