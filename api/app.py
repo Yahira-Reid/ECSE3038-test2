@@ -58,3 +58,23 @@ def list_readings(mac: str = None, limit: int = Query(default=10, ge=1, le=100))
     query = {"mac": mac} if mac else {}
     docs = readings.find(query, {"_id": 0}).sort("time", -1).limit(limit)
     return [{**d, "time": d["time"].isoformat()} for d in docs]
+
+settings = db["settings"]
+
+class SettingsIn(BaseModel):
+    mode: Literal["auto", "on", "off"]
+    max_humidity: float = Field(ge=0, le=100)
+
+@app.put("/fans/{mac}/settings")
+def put_settings(mac: str, body: SettingsIn, response: Response):
+    if not fans.find_one({"mac": mac}):
+        raise HTTPException(status_code=404, detail="Fan not found")
+    existed = settings.find_one({"mac": mac}) is not None
+    doc = {"mac": mac, "mode": body.mode, "max_humidity": body.max_humidity}
+    settings.replace_one({"mac": mac}, doc, upsert=True)
+    response.status_code = 200 if existed else 201
+    payload = {"mode": body.mode, "max_humidity": float(body.max_humidity)}
+    publish.single(
+        f"ecse3038/{os.getenv('MQTT_NAME')}/fan/settings",
+        json.dumps(payload), hostname="135.232.203.144", port=1883, retain=True)
+    return payload
