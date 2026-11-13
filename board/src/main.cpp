@@ -53,3 +53,14 @@ void updateFan() {
     mqtt.publish(T_STATE, fanOn ? "on" : "off", true);
   }
 }
+
+void onMessage(char* topic, byte* payload, unsigned int length) {
+  JsonDocument doc;
+  if (deserializeJson(doc, payload, length)) return;
+  if (!doc["mode"].is<const char*>() || !doc["max_humidity"].is<float>()) return;
+  String newMode = doc["mode"].as<String>();
+  if (newMode != "auto" && newMode != "on" && newMode != "off") return;
+  mode = newMode;
+  maxHumidity = doc["max_humidity"].as<float>();
+  updateFan();
+}
