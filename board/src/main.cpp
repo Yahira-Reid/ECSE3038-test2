@@ -42,3 +42,14 @@ void connectMqtt() {
     }
   }
 }
+
+void updateFan() {
+  bool shouldBeOn = false;
+  if (mode == "on") shouldBeOn = true;
+  else if (mode == "auto") shouldBeOn = humidity > maxHumidity;
+  digitalWrite(LED_PIN, shouldBeOn ? HIGH : LOW);
+  if (shouldBeOn != fanOn) {
+    fanOn = shouldBeOn;
+    mqtt.publish(T_STATE, fanOn ? "on" : "off", true);
+  }
+}
