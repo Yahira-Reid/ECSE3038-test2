@@ -35,3 +35,20 @@ def get_fan(mac: str):
     if not fan:
         raise HTTPException(status_code=404, detail="Fan not found")
     return fan
+
+class ReadingIn(BaseModel):
+    mac: str
+    humidity: float = Field(ge=0, le=100)
+
+@app.post("/readings", status_code=201)
+def create_reading(reading: ReadingIn, x_api_key: str = Header(default=None)):
+    if not x_api_key:
+        raise HTTPException(status_code=401, detail="Missing API key")
+    owner = fans.find_one({"key": x_api_key})
+    if not owner:
+        raise HTTPException(status_code=401, detail="Unknown API key")
+    if owner["mac"] != reading.mac:
+        raise HTTPException(status_code=403, detail="Key belongs to another fan")
+    now = datetime.now(timezone.utc)
+    readings.insert_one({"mac": reading.mac, "humidity": reading.humidity, "time": now})
+    return {"mac": reading.mac, "humidity": reading.humidity, "time": now.isoformat()}
