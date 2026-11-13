@@ -78,3 +78,15 @@ def put_settings(mac: str, body: SettingsIn, response: Response):
         f"ecse3038/{os.getenv('MQTT_NAME')}/fan/settings",
         json.dumps(payload), hostname="135.232.203.144", port=1883, retain=True)
     return payload
+
+@app.delete("/fans/{mac}", status_code=204)
+def delete_fan(mac: str, x_api_key: str = Header(default=None)):
+    fan = fans.find_one({"mac": mac})
+    if not fan:
+        raise HTTPException(status_code=404, detail="Fan not found")
+    if not x_api_key or not fans.find_one({"key": x_api_key}):
+        raise HTTPException(status_code=401, detail="Missing or unknown API key")
+    if fan["key"] != x_api_key:
+        raise HTTPException(status_code=403, detail="Key belongs to another fan")
+    fans.delete_one({"mac": mac})
+    return Response(status_code=204)
